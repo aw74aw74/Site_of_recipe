@@ -100,10 +100,10 @@ def parse_steps(value):
     """
     Парсит текст шагов приготовления в структурированный формат.
     
-    Правила:
-    1. Если строка заканчивается ":", то это название этапа
-    2. Если в начале строки этапа стоит цифра, она идет на номер
-    3. Все следующие строки - подэтапы (до пустой строки)
+    Поддерживает различные форматы:
+    1. Этапы с двоеточием в конце и подэтапами
+    2. Нумерованные шаги без двоеточия
+    3. Простой список шагов
     """
     if not value:
         return []
@@ -126,33 +126,70 @@ def parse_steps(value):
                 current_step = None
                 current_substeps = []
             continue
-            
-        # Строка заканчивается на ":" - это новый этап
-        if line.endswith(':'):
-            # Завершаем предыдущий этап, если он есть
+        
+        # Проверяем различные форматы строк
+        step_with_colon = re.match(r'^(?:(\d+)\.\s*)?(.+):$', line)  # Шаг с двоеточием
+        step_with_number = re.match(r'^(\d+)\.\s*(.+)$', line)  # Нумерованный шаг
+        
+        # Если это шаг с двоеточием
+        if step_with_colon:
             if current_step:
                 current_step['substeps'] = current_substeps
                 steps.append(current_step)
                 current_substeps = []
             
-            # Проверяем, начинается ли строка с цифры
-            step_match = re.match(r'^(\d+)\.\s*(.+):$', line)
-            if step_match:
-                number = step_match.group(1)
-                title = step_match.group(2)
-            else:
-                number = None
-                title = line[:-1]  # Убираем двоеточие
-            
+            number = step_with_colon.group(1)
+            title = step_with_colon.group(2)
             current_step = {
                 'number': number,
                 'title': title,
                 'substeps': []
             }
         
-        # Если есть текущий этап и это не пустая строка - это подэтап
-        elif current_step and line:
-            current_substeps.append(line)
+        # Если это нумерованный шаг без двоеточия
+        elif step_with_number:
+            if current_step:
+                current_step['substeps'] = current_substeps
+                steps.append(current_step)
+                current_substeps = []
+            
+            number = step_with_number.group(1)
+            title = step_with_number.group(2)
+            current_step = {
+                'number': number,
+                'title': title,
+                'substeps': []
+            }
+            # Сразу добавляем шаг, так как он не предполагает подшагов
+            steps.append(current_step)
+            current_step = None
+            current_substeps = []
+        
+        # Если строка начинается с маркера списка или это обычный текст
+        elif line.startswith(('-', '•', '*')):
+            if current_step:
+                current_substeps.append(line)
+            else:
+                # Если нет текущего шага, создаем новый без номера
+                current_step = {
+                    'number': None,
+                    'title': line,
+                    'substeps': []
+                }
+                steps.append(current_step)
+                current_step = None
+        else:
+            if current_step:
+                current_substeps.append(line)
+            else:
+                # Если нет текущего шага, создаем новый без номера
+                current_step = {
+                    'number': None,
+                    'title': line,
+                    'substeps': []
+                }
+                steps.append(current_step)
+                current_step = None
     
     # Добавляем последний этап, если он есть
     if current_step:

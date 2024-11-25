@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+{% extends 'recipes/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">{{ title }}</h2>
+                    
+                    <form method="post" enctype="multipart/form-data" class="recipe-form">
+                        {% csrf_token %}
+                        
+                        {% for field in form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                {{ field.label }}
+                                {% if field.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+                            
+                            {% if field.name == 'categories' %}
+                                <div class="d-flex gap-3 align-items-end">
+                                    <div class="category-select flex-grow-1">
+                                        {{ field }}
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                                            <i class="bi bi-plus-lg"></i>
+                                            Добавить категорию
+                                        </button>
+                                    </div>
+                                </div>
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
+                                {% endif %}
+                            {% else %}
+                                {{ field.errors }}
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-lg"></i>
+                                Сохранить
+                            </button>
+                            <a href="{% url 'home' %}" class="btn btn-danger">
+                                <i class="bi bi-x-lg"></i>
+                                Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно добавления категории -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCategoryModalLabel">Добавить новую категорию</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addCategoryForm" method="post" action="{% url 'add_category' %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Название категории</label>
+                        <input type="text" class="form-control" id="categoryName" name="name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i>
+                        Отмена
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-lg"></i>
+                        Добавить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Стили для формы рецепта */
+    .recipe-form textarea {
+        min-height: 120px;
+    }
+    
+    .recipe-form .form-control:focus,
+    .recipe-form .form-select:focus {
+        border-color: var(--success);
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+    }
+    
+    /* Стили для выбора категорий */
+    .category-select select[multiple] {
+        min-height: 150px;
+        width: 100%;
+        display: block;
+    }
+    
+    /* Стили для предпросмотра изображения */
+    .image-preview {
+        max-width: 300px;
+        margin-top: 1rem;
+    }
+    
+    .image-preview img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+    }
+</style>
+
+<script>
+    // Предпросмотр изображения
+    document.addEventListener('DOMContentLoaded', function() {
+        const imageInput = document.querySelector('input[type="file"]');
+        if (imageInput) {
+            imageInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    let preview = this.parentElement.querySelector('.image-preview');
+                    if (!preview) {
+                        preview = document.createElement('div');
+                        preview.className = 'image-preview';
+                        this.parentElement.appendChild(preview);
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Обработка формы добавления категории
+        const addCategoryForm = document.getElementById('addCategoryForm');
+        addCategoryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this),
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Добавляем новую категорию в select
+                    const categorySelect = document.querySelector('select[name="categories"]');
+                    const option = new Option(data.category.name, data.category.id);
+                    categorySelect.add(option);
+                    option.selected = true;
+                    
+                    // Закрываем модальное окно
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'));
+                    modal.hide();
+                    
+                    // Очищаем форму
+                    addCategoryForm.reset();
+                    
+                    // Показываем уведомление
+                    alert('Категория успешно добавлена!');
+                } else {
+                    alert('Ошибка при добавлении категории: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Произошла ошибка при добавлении категории');
+            });
+        });
+    });
+</script>
+{% endblock %}

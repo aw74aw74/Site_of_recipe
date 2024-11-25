@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+{% extends 'recipes/base.html' %}
+
+{% block recipe_filters %}
+<div class="dropdown">
+    <button class="btn btn-success dropdown-toggle" type="button" id="categoryFilterBtn" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-funnel"></i>
+        Фильтр
+        {% if selected_categories %}
+        <span class="badge bg-light text-success ms-1">{{ selected_categories|length }}</span>
+        {% endif %}
+    </button>
+    <div class="dropdown-menu dropdown-menu-end shadow">
+        <div class="p-3">
+            <h6 class="dropdown-header px-0 pb-2 mb-2 border-bottom">Фильтр по категориям</h6>
+            <form method="get" id="filterForm">
+                <div class="category-filter">
+                    {% for checkbox in form.categories %}
+                    <div class="form-check">
+                        {{ checkbox.tag }}
+                        <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                            {{ checkbox.choice_label }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-success btn-sm w-100">
+                        <i class="bi bi-check-lg"></i>
+                        Применить
+                    </button>
+                    {% if selected_categories %}
+                    <a href="{% url 'home' %}" class="btn btn-danger btn-sm w-100">
+                        <i class="bi bi-x-lg"></i>
+                        Сбросить
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block view_toggle %}
+<div class="btn-group">
+    <button class="btn btn-primary" onclick="toggleView('grid')" id="gridViewBtn" title="Сетка">
+        <i class="bi bi-grid"></i>
+    </button>
+    <button class="btn btn-primary" onclick="toggleView('table')" id="tableViewBtn" title="Список">
+        <i class="bi bi-list"></i>
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    {% if selected_categories %}
+    <div class="bg-light rounded p-3 mb-4">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <span class="text-success fw-bold me-2">Выбранные категории:</span>
+            {% for category in selected_categories %}
+            <span class="badge bg-success">{{ category.name }}</span>
+            {% endfor %}
+            <a href="{% url 'home' %}" class="btn btn-danger btn-sm ms-auto">
+                <i class="bi bi-x-lg"></i>
+                Сбросить все
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4" id="recipesContainer">
+        {% for recipe in recipes %}
+        <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+            <a href="{% url 'recipe_detail' recipe.pk %}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm recipe-card">
+                    {% if recipe.image %}
+                    <div class="recipe-image">
+                        <img src="{{ recipe.image.url }}" class="card-img-top" alt="{{ recipe.title }}">
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title text-dark">{{ recipe.title }}</h5>
+                        <p class="card-text text-muted small">{{ recipe.description|truncatewords:20 }}</p>
+                        {% if recipe.categories.all %}
+                        <div class="mb-2">
+                            {% for category in recipe.categories.all %}
+                            <span class="badge bg-success">{{ category.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="text-muted small">
+                            <i class="bi bi-clock me-1"></i>
+                            {{ recipe.preparation_time }} минут
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.category-filter p {
+    margin-bottom: 0.5rem;
+}
+
+.category-filter label {
+    display: none;
+}
+
+.category-filter select {
+    width: 100%;
+    min-width: 200px;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.category-filter select:focus {
+    border-color: #198754;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+}
+
+.category-filter select[multiple] {
+    min-height: 150px;
+}
+</style>
+
+<script>
+function toggleView(view) {
+    const container = document.getElementById('recipesContainer');
+    const gridBtn = document.getElementById('gridViewBtn');
+    const tableBtn = document.getElementById('tableViewBtn');
+    
+    if (view === 'grid') {
+        container.classList.remove('table-view');
+        gridBtn.classList.add('active');
+        tableBtn.classList.remove('active');
+        localStorage.setItem('recipeView', 'grid');
+    } else {
+        container.classList.add('table-view');
+        tableBtn.classList.add('active');
+        gridBtn.classList.remove('active');
+        localStorage.setItem('recipeView', 'table');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('recipeView') || 'grid';
+    toggleView(savedView);
+});
+</script>
+{% endblock %}

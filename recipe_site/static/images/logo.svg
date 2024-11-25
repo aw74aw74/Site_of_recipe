@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="300" height="50" xmlns="http://www.w3.org/2000/svg">
+    <!-- Фон логотипа -->
+    <rect width="100%" height="100%" fill="none"/>
+    
+    <!-- Иконка поварского колпака -->
+    <path d="M30 35c0 0-5-7-5-15c0-8 4-12 15-12s15 4 15 12c0 8-5 15-5 15" 
+          stroke="#ffffff" fill="none" stroke-width="2"/>
+    <path d="M25 35h30" stroke="#ffffff" fill="none" stroke-width="2"/>
+    
+    <!-- Текст "Вкусные рецепты" -->
+    <text x="65" y="30" font-family="Arial" font-size="20" fill="#ffffff">
+        Вкусные рецепты
+    </text>
+</svg>

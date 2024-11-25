@@ -1,0 +1,191 @@
+{% extends 'recipes/base.html' %}
+{% load recipe_filters %}
+
+{% block content %}
+<div class="recipe-detail-container">
+    <article class="recipe-article">
+        <header class="recipe-header">
+            <h1 class="recipe-title">{{ recipe.title }}</h1>
+            <div class="recipe-meta">
+                <span class="recipe-author">Автор: {{ recipe.author.username }}</span>
+                <span class="recipe-time">
+                    <i class="bi bi-clock"></i>
+                    {{ recipe.preparation_time }} минут
+                </span>
+            </div>
+            <div class="recipe-categories">
+                {% for category in recipe.categories.all %}
+                <span class="badge bg-success">{{ category.name }}</span>
+                {% endfor %}
+            </div>
+        </header>
+
+        {% if recipe.image %}
+        <section class="recipe-image mb-4">
+            <img src="{{ recipe.image.url }}" alt="{{ recipe.title }}" class="img-fluid rounded">
+        </section>
+        {% endif %}
+
+        <section class="recipe-description mb-4">
+            <p>{{ recipe.description|linebreaksbr }}</p>
+        </section>
+
+        <section class="recipe-ingredients mb-4">
+            <h2>Ингредиенты</h2>
+            <div class="ingredients-blocks">
+                {% with ingredient_blocks=recipe.ingredients|parse_ingredients %}
+                    {% for block in ingredient_blocks %}
+                        {% if block.title %}
+                            <div class="ingredient-block">
+                                <h3 class="block-title">{{ block.title }}</h3>
+                                <ul class="ingredients-list">
+                                    {% for item in block.items %}
+                                        <li class="ingredient-item">{{ item|capfirst }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% else %}
+                            <ul class="ingredients-list">
+                                {% for item in block.items %}
+                                    <li class="ingredient-item">{{ item|capfirst }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    {% endfor %}
+                {% endwith %}
+            </div>
+        </section>
+
+        <section class="recipe-steps">
+            <h2>Шаги приготовления</h2>
+            <ul class="steps-list">
+                {% with steps=recipe.steps|parse_steps %}
+                    {% for step in steps %}
+                        <li class="step-item">
+                            {% if step.number %}
+                                <span class="step-number">{{ step.number }}</span>
+                            {% else %}
+                                <span class="step-number bullet">•</span>
+                            {% endif %}
+                            <div class="step-content">
+                                <h3 class="step-title">{{ step.title }}</h3>
+                                {% if step.substeps %}
+                                    <ul class="substeps">
+                                        {% for substep in step.substeps %}
+                                            <li class="substep">{{ substep }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                {% endwith %}
+            </ul>
+        </section>
+
+        {% if user.is_authenticated and user == recipe.author %}
+        <footer class="recipe-actions">
+            <div class="d-flex gap-3">
+                <a href="{% url 'edit_recipe' recipe.pk %}" class="btn btn-success">
+                    <i class="bi bi-pencil"></i>
+                    Редактировать
+                </a>
+                <form action="{% url 'delete_recipe' recipe.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" 
+                            onclick="return confirm('Вы уверены, что хотите удалить этот рецепт?')">
+                        <i class="bi bi-trash"></i>
+                        Удалить
+                    </button>
+                </form>
+                <a href="{% url 'home' %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i>
+                    Назад к списку
+                </a>
+            </div>
+        </footer>
+        {% endif %}
+    </article>
+</div>
+
+<style>
+.recipe-detail-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.recipe-title {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.recipe-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    color: #666;
+}
+
+.recipe-categories {
+    margin-bottom: 1.5rem;
+}
+
+.ingredients-blocks {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+.ingredient-block {
+    margin-bottom: 1.5rem;
+}
+
+.block-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.ingredients-list {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.ingredient-item {
+    padding: 0.25rem 0;
+}
+
+.steps-list {
+    counter-reset: step-counter;
+}
+
+.step-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.step-number {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+.step-text {
+    margin: 0;
+    flex: 1;
+}
+
+@media (max-width: 768px) {
+    .recipe-title {
+        font-size: 1.5rem;
+    }
+    
+    .recipe-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

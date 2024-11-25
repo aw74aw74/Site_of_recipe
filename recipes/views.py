@@ -37,16 +37,17 @@ def home(request):
         - Поддерживает фильтрацию по категориям
         - Отображает все рецепты, если фильтры не выбраны
         - Сохраняет выбранные фильтры в форме
+        - Сортирует рецепты по названию в алфавитном порядке
     """
     # Инициализация формы фильтрации
     form = CategoryFilterForm(request.GET)
-    recipes = Recipe.objects.all()
+    recipes = Recipe.objects.all().order_by('title')  # Добавляем сортировку по названию
     selected_categories = []
 
     # Применение фильтров, если они выбраны
     if form.is_valid() and form.cleaned_data['categories']:
         selected_categories = form.cleaned_data['categories']
-        recipes = recipes.filter(categories__in=selected_categories).distinct()
+        recipes = recipes.filter(categories__in=selected_categories).distinct().order_by('title')  # Сохраняем сортировку после фильтрации
 
     context = {
         'recipes': recipes,

@@ -68,7 +68,12 @@ def recipe_detail(request, recipe_id):
         HttpResponse с отрендеренным шаблоном
     """
     recipe = get_object_or_404(Recipe, id=recipe_id)
-    return render(request, 'recipes/recipe_detail.html', {'recipe': recipe})
+    # Получаем отсортированные категории для рецепта
+    categories = recipe.categories.all().order_by('name')
+    return render(request, 'recipes/recipe_detail.html', {
+        'recipe': recipe,
+        'categories': categories
+    })
 
 @login_required
 def add_recipe(request):

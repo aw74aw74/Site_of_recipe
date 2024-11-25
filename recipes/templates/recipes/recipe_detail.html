@@ -14,9 +14,11 @@
                 </span>
             </div>
             <div class="recipe-categories">
-                {% for category in recipe.categories.all %}
-                <span class="badge bg-success">{{ category.name }}</span>
-                {% endfor %}
+                {% with categories=recipe.categories.all|dictsort:"name" %}
+                    {% for category in categories %}
+                    <span class="badge bg-success">{{ category.name }}</span>
+                    {% endfor %}
+                {% endwith %}
             </div>
         </header>
 

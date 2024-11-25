@@ -94,7 +94,7 @@ def add_recipe(request):
             recipe.save()
             form.save_m2m()  # Сохраняем связи many-to-many
             messages.success(request, 'Рецепт успешно добавлен!')
-            return redirect('recipe_detail', pk=recipe.pk)
+            return redirect('recipe_detail', recipe_id=recipe.id)
     else:
         form = RecipeForm()
     

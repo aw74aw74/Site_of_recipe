@@ -1,3 +1,11 @@
+"""
+Пользовательские фильтры шаблонов для приложения рецептов.
+
+Этот модуль содержит набор фильтров для обработки текста в шаблонах Django,
+специально разработанных для форматирования рецептов, ингредиентов и шагов
+приготовления.
+"""
+
 from django import template
 import re
 
@@ -6,24 +14,50 @@ register = template.Library()
 @register.filter
 def split(value, arg):
     """
-    Splits a string by the given argument.
-    Usage: {{ value|split:"delimiter" }}
+    Разделяет строку по указанному разделителю.
+    
+    Args:
+        value: Исходная строка
+        arg: Разделитель
+    
+    Returns:
+        list: Список подстрок
+    
+    Использование в шаблоне: 
+        {{ value|split:"разделитель" }}
     """
     return value.split(arg)
 
 @register.filter
 def strip(value):
     """
-    Removes leading and trailing whitespace.
-    Usage: {{ value|strip }}
+    Удаляет начальные и конечные пробелы из строки.
+    
+    Args:
+        value: Исходная строка
+    
+    Returns:
+        str: Строка без начальных и конечных пробелов
+    
+    Использование в шаблоне:
+        {{ value|strip }}
     """
     return value.strip() if value else value
 
 @register.filter
 def get_substeps(steps, index):
     """
-    Returns a list of substeps for the given step index.
-    Substeps are lines starting with '-' or '•' that follow the main step.
+    Возвращает список подшагов для указанного шага.
+    
+    Подшаги - это строки, начинающиеся с '-' или '•', 
+    которые следуют за основным шагом.
+    
+    Args:
+        steps: Список всех шагов
+        index: Индекс основного шага
+    
+    Returns:
+        list: Список подшагов
     """
     if not steps or not isinstance(steps, list) or index >= len(steps):
         return []
@@ -44,8 +78,25 @@ def get_substeps(steps, index):
 @register.filter
 def parse_ingredients(value):
     """
-    Parses ingredients text into blocks.
-    Each block starts with a line ending with ':' and ends with a double newline.
+    Разбирает текст ингредиентов на блоки.
+    
+    Каждый блок начинается со строки, заканчивающейся двоеточием,
+    и заканчивается двойным переносом строки.
+    
+    Args:
+        value: Текст с ингредиентами
+    
+    Returns:
+        list: Список блоков ингредиентов
+    
+    Пример входных данных:
+        Для теста:
+        - 2 стакана муки
+        - 1 яйцо
+        
+        Для начинки:
+        - 300г творога
+        - 2 ст.л. сахара
     """
     if not value:
         return []
@@ -98,12 +149,27 @@ def parse_ingredients(value):
 @register.filter
 def parse_steps(value):
     """
-    Парсит текст шагов приготовления в структурированный формат.
+    Разбирает текст шагов приготовления в структурированный формат.
     
     Поддерживает различные форматы:
     1. Этапы с двоеточием в конце и подэтапами
     2. Нумерованные шаги без двоеточия
     3. Простой список шагов
+    
+    Args:
+        value: Текст с шагами приготовления
+    
+    Returns:
+        list: Список структурированных шагов
+    
+    Пример входных данных:
+        Подготовка теста:
+        - Смешать муку с солью
+        - Добавить яйца
+        
+        1. Раскатать тесто
+        2. Выложить начинку
+        3. Запекать при 180°C
     """
     if not value:
         return []

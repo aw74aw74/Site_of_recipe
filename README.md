@@ -51,6 +51,37 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+## Развертывание на PythonAnywhere
+
+1. Войдите в консоль PythonAnywhere:
+```bash
+# Перейдите в директорию проекта
+cd ~/Site_of_recipe
+
+# Обновите код из репозитория
+git pull origin main
+
+# Активируйте виртуальное окружение
+workon <имя_вашего_virtualenv>
+
+# Обновите зависимости
+pip install -r requirements.txt
+
+# Примените миграции базы данных
+python manage.py migrate
+
+# Соберите статические файлы
+python manage.py collectstatic --noinput
+```
+
+2. Перезапустите веб-приложение:
+   - Перейдите в раздел "Web" на PythonAnywhere
+   - Нажмите кнопку "Reload" для вашего веб-приложения
+
+3. Проверьте журналы ошибок:
+   - В разделе "Web" проверьте "Error log"
+   - Убедитесь, что нет ошибок после обновления
+
 ## Структура проекта
 
 - `recipe_site/` - основной проект Django

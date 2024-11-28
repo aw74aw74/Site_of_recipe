@@ -62,7 +62,7 @@ cd ~/Site_of_recipe
 git pull origin main
 
 # Активируйте виртуальное окружение
-workon <имя_вашего_virtualenv>
+source /home/aw74/.virtualenvs/recipe_env/bin/activate
 
 # Обновите зависимости
 pip install -r requirements.txt

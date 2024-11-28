@@ -15,3 +15,15 @@ Pillow==10.2.0
 
 # Python-dotenv - для загрузки переменных окружения из файла .env
 python-dotenv==1.0.1
+
+# Requests - библиотека для HTTP-запросов
+requests==2.32.3
+
+# Зависимости для requests
+certifi==2024.8.30
+charset-normalizer==3.3.2
+idna==3.10
+urllib3==2.2.3
+
+# Docutils - для обработки и форматирования текстовых документов
+docutils==0.21.2

@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Настройка ALLOWED_HOSTS
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,aw74.pythonanywhere.com').split(',')
 
 # Определение установленных приложений
 INSTALLED_APPS = [

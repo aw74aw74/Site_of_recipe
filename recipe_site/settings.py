@@ -29,7 +29,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # ВНИМАНИЕ: отключите DEBUG в продакшене!
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+# Настройка ALLOWED_HOSTS
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Определение установленных приложений
 INSTALLED_APPS = [

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Список рецептов{% endblock %}
+
+{% block content %}
+<h1>Рецепты</h1>
+
+<div class="row">
+    {% for recipe in recipes %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            {% if recipe.image %}
+            <img src="/media/{{ recipe.image }}" class="card-img-top" alt="{{ recipe.title }}">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ recipe.title }}</h5>
+                <p class="card-text">
+                    <small class="text-muted">Время приготовления: {{ recipe.cooking_time }} мин.</small>
+                </p>
+                <div class="mb-2">
+                    {% for category in recipe.categories %}
+                    <span class="badge bg-secondary">{{ category.name }}</span>
+                    {% endfor %}
+                </div>
+                <a href="/recipes/{{ recipe.id }}" class="btn btn-primary">Подробнее</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

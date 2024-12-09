@@ -48,39 +48,49 @@ python manage.py createsuperuser
 
 6. Запустите сервер разработки:
 ```bash
-python manage.py runserver
+python manage.py runserver 0.0.0.0:8000
 ```
 
-## Развертывание на PythonAnywhere
+## Обновление проекта
 
-1. Войдите в консоль PythonAnywhere:
-```bash
-# Перейдите в директорию проекта
-cd ~/Site_of_recipe
+### Запуск FastAPI
 
-# Обновите код из репозитория
-git pull origin main
+Для запуска FastAPI приложения выполните следующие шаги:
 
-# Активируйте виртуальное окружение
-source /home/aw74/.virtualenvs/recipe_env/bin/activate
+1. **Создайте файл для запуска FastAPI:**
+   Убедитесь, что у вас есть файл, например, `run.py`, с содержимым:
+   ```python
+   import uvicorn
 
-# Обновите зависимости
-pip install -r requirements.txt
+   if __name__ == "__main__":
+       uvicorn.run("api.main:app", host="0.0.0.0", port=8001, log_level="info")
+   ```
 
-# Примените миграции базы данных
-python manage.py migrate
+2. **Настройте WSGI-файл:**
+   Убедитесь, что ваш WSGI-файл настроен для работы с FastAPI.
 
-# Соберите статические файлы
-python manage.py collectstatic --noinput
+3. **Запустите FastAPI с помощью Uvicorn:**
+   Используйте следующую команду:
+   ```bash
+   uvicorn run:app --host 0.0.0.0 --port 8001
+   ```
+
+4. **Перезагрузите веб-приложение:**
+   После внесения изменений, перезагрузите ваше веб-приложение.
+
+### Проверка работы FastAPI
+
+Проверьте, что FastAPI доступен по адресу:
+```
+http://localhost:8001/api
 ```
 
-2. Перезапустите веб-приложение:
-   - Перейдите в раздел "Web" на PythonAnywhere
-   - Нажмите кнопку "Reload" для вашего веб-приложения
+### Документация API
 
-3. Проверьте журналы ошибок:
-   - В разделе "Web" проверьте "Error log"
-   - Убедитесь, что нет ошибок после обновления
+Документация API доступна по адресу:
+```
+http://localhost:8001/docs
+```
 
 ## Структура проекта
 
@@ -131,7 +141,3 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 - `black` для форматирования кода
 - `flake8` для проверки стиля кода
 - `pytest` для тестирования
-
-## Лицензия
-
-MIT License

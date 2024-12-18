@@ -35,7 +35,8 @@ gunicorn
 # uvicorn - ASGI сервер для запуска на Heroku
 uvicorn==0.22.0
 
+# fastapi - для работы на Heroku
+fastapi==0.95.0
+
 # Docutils - для обработки и форматирования текстовых документов
 docutils==0.20.1
-
-uvicorn==0.22.0

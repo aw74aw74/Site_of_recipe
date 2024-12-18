@@ -25,5 +25,8 @@ charset-normalizer==3.3.2
 idna>=3.7
 urllib3>=2.2.2
 
+# Gunicorn - WSGI HTTP Server
+gunicorn
+
 # Docutils - для обработки и форматирования текстовых документов
 docutils==0.20.1

@@ -34,8 +34,8 @@ for route in fastapi_app.routes:
     if route.path != "/":  # Пропускаем корневой маршрут FastAPI
         app.routes.append(route)
 
-# Добавляем Django как корневое приложение
-app.mount("/", django_app)
+# Добавляем Django как приложение на префиксе
+app.mount("/django", django_app)
 
 # Экспортируем приложение
 application = app

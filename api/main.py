@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile
+from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, HTMLResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +9,7 @@ from pathlib import Path
 import logging
 import shutil
 import os
-from . import models, schemas, auth
+from . import models, schemas, auth, templates
 from .database import engine, SessionLocal
 
 # Настройка логирования
@@ -261,3 +261,9 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
     if category is None:
         raise HTTPException(status_code=404, detail="Категория не найдена")
     return category
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request, db: Session = Depends(get_db)):
+    categories = db.query(models.Category).all()  # Получаем все категории
+    recipes = db.query(models.Recipe).all()  # Получаем все рецепты
+    return templates.TemplateResponse("recipes/home.html", {"request": request, "categories": categories, "recipes": recipes})

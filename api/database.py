@@ -1,23 +1,18 @@
 from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
-from pathlib import Path
-from . import models
 
-# Получаем путь к базе данных
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATABASE_URL = f"sqlite:///{BASE_DIR}/db.sqlite3"
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./db.sqlite3")
 
-# Создаем движок SQLAlchemy
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Создаем фабрику сессий
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Создаем таблицы
-models.Base.metadata.create_all(bind=engine)
+Base = declarative_base()
 
-# Функция-генератор для получения сессии базы данных
 def get_db():
     db = SessionLocal()
     try:

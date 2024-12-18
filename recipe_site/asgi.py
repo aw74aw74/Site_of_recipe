@@ -29,13 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Добавляем маршруты FastAPI
-for route in fastapi_app.routes:
-    if route.path != "/":  # Пропускаем корневой маршрут FastAPI
-        app.routes.append(route)
+# Монтируем FastAPI приложение на /api
+app.mount("/api", fastapi_app)
 
-# Добавляем Django как приложение на префиксе
-app.mount("/django", django_app)
+# Добавляем Django как основное приложение
+app.mount("/", django_app)
 
 # Экспортируем приложение
 application = app

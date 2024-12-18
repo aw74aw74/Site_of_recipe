@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, HTMLResponse
+from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile
+from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware

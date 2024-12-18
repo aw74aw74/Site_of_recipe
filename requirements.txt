@@ -50,5 +50,8 @@ passlib==1.7.4
 # pydantic - для работы на Heroku
 pydantic==1.10.2
 
+# python-multipart - для работы с формами в FastAPI
+python-multipart==0.0.5
+
 # Docutils - для обработки и форматирования текстовых документов
 docutils==0.20.1

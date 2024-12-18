@@ -5,7 +5,7 @@
 - Административный интерфейс (/admin/)
 - Документация админки (/admin/doc/)
 - Все URL приложения рецептов (/)
-- API интерфейс (/api/)
+- API интерфейс обрабатывается через ASGI (/api/)
 
 Также настраивается обработка медиа-файлов в режиме разработки.
 
@@ -17,11 +17,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
-from api.main import app
 
 urlpatterns = [
     path('admin/doc/', include('django.contrib.admindocs.urls')),
     path('admin/', admin.site.urls),
     path('', include('recipes.urls')),
-    path('api/', app),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

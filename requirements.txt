@@ -25,6 +25,10 @@ charset-normalizer==3.3.2
 idna>=3.7
 urllib3>=2.2.2
 
+# dj-database-url - для настройки базы данных через URL
+dj-database-url>=2.1.0
+psycopg2>=2.9.9
+
 # Gunicorn - WSGI HTTP Server
 gunicorn
 

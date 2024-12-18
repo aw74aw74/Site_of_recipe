@@ -38,5 +38,8 @@ uvicorn==0.22.0
 # fastapi - для работы на Heroku
 fastapi==0.95.0
 
+# sqlalchemy - для работы на Heroku
+sqlalchemy==1.4.47
+
 # Docutils - для обработки и форматирования текстовых документов
 docutils==0.20.1

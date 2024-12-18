@@ -1,7 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import timedelta
@@ -10,9 +8,8 @@ from pathlib import Path
 import logging
 import shutil
 import os
-from . import models, schemas, auth, templates
+from . import models, schemas, auth
 from .database import engine, SessionLocal
-from fastapi.templating import Jinja2Templates
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -25,13 +22,9 @@ models.Base.metadata.create_all(bind=engine)
 MEDIA_DIR = Path("media/recipes")
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "recipes" / "templates"))
-
 app = FastAPI(title="Recipe API", 
              description="API для управления рецептами",
-             version="1.0.0",
-             root_path="/api")
+             version="1.0.0")
 
 # Настройка CORS
 app.add_middleware(
@@ -41,9 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Монтирование статических файлов
-app.mount("/media", StaticFiles(directory="media"), name="media")
 
 # Dependency
 def get_db():
@@ -268,12 +258,6 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Категория не найдена")
     return category
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, db: Session = Depends(get_db)):
-    categories = db.query(models.Category).all()
-    recipes = db.query(models.Recipe).all()
-    return templates.TemplateResponse("recipes/home.html", {
-        "request": request,
-        "categories": categories,
-        "recipes": recipes
-    })
+@app.get("/")
+async def read_root():
+    return {"message": "Welcome to Recipe API"}

@@ -32,5 +32,10 @@ psycopg2>=2.9.9
 # Gunicorn - WSGI HTTP Server
 gunicorn
 
+# uvicorn - ASGI сервер для запуска на Heroku
+uvicorn==0.22.0
+
 # Docutils - для обработки и форматирования текстовых документов
 docutils==0.20.1
+
+uvicorn==0.22.0

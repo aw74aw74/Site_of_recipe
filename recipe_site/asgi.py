@@ -28,3 +28,6 @@ app.mount("/api", fastapi_app)
 
 # Монтируем Django приложение как корневое
 app.mount("/", WSGIMiddleware(django_app))
+
+# Экспортируем приложение для Uvicorn
+application = app

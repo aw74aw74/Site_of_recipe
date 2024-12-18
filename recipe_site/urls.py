@@ -16,13 +16,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+from fastapi.middleware.wsgi import WSGIMiddleware
+from api.main import app as fastapi_app
 
 urlpatterns = [
     path('admin/doc/', include('django.contrib.admindocs.urls')),
     path('admin/', admin.site.urls),
     path('', include('recipes.urls')),
-]
-
-# Добавляем обработку медиа-файлов в режиме разработки
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('api/', WSGIMiddleware(fastapi_app)),  # FastAPI под /api/
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

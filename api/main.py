@@ -12,6 +12,7 @@ import shutil
 import os
 from . import models, schemas, auth, templates
 from .database import engine, SessionLocal
+from fastapi.templating import Jinja2Templates
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -24,9 +25,13 @@ models.Base.metadata.create_all(bind=engine)
 MEDIA_DIR = Path("media/recipes")
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "recipes" / "templates"))
+
 app = FastAPI(title="Recipe API", 
              description="API для управления рецептами",
-             version="1.0.0")
+             version="1.0.0",
+             root_path="/api")
 
 # Настройка CORS
 app.add_middleware(
@@ -265,6 +270,10 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, db: Session = Depends(get_db)):
-    categories = db.query(models.Category).all()  # Получаем все категории
-    recipes = db.query(models.Recipe).all()  # Получаем все рецепты
-    return templates.TemplateResponse("recipes/home.html", {"request": request, "categories": categories, "recipes": recipes})
+    categories = db.query(models.Category).all()
+    recipes = db.query(models.Recipe).all()
+    return templates.TemplateResponse("recipes/home.html", {
+        "request": request,
+        "categories": categories,
+        "recipes": recipes
+    })

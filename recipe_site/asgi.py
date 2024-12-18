@@ -6,8 +6,7 @@ import os
 from django.core.asgi import get_asgi_application
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from starlette.routing import Mount
+from starlette.middleware.wsgi import WSGIMiddleware
 from api.main import app as fastapi_app
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'recipe_site.settings')
@@ -24,13 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Добавляем маршруты FastAPI
-for route in fastapi_app.routes:
-    if route.path != "/":  # Пропускаем корневой маршрут FastAPI
-        app.routes.append(route)
+# Монтируем FastAPI приложение на /api
+app.mount("/api", fastapi_app)
 
-# Добавляем Django как корневое приложение
-app.mount("/", django_app)
-
-# Экспортируем приложение
-application = app
+# Монтируем Django приложение как корневое
+app.mount("/", WSGIMiddleware(django_app))

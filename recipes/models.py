@@ -15,6 +15,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+import cloudinary
+import cloudinary.uploader
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 class Category(models.Model):
     """
@@ -130,3 +134,17 @@ class Recipe(models.Model):
         verbose_name = "Рецепт"
         verbose_name_plural = "Рецепты"
         ordering = ['-created_at']  # Сортировка по дате создания (сначала новые)
+
+@receiver(pre_delete, sender=Recipe)
+def delete_recipe_image(sender, instance, **kwargs):
+    """
+    Сигнал для удаления изображения из Cloudinary перед удалением рецепта
+    """
+    if instance.image:  # Проверяем, есть ли изображение
+        try:
+            # Получаем public_id изображения из URL
+            public_id = instance.image.public_id
+            # Удаляем изображение из Cloudinary
+            cloudinary.uploader.destroy(public_id)
+        except Exception as e:
+            print(f"Ошибка при удалении изображения из Cloudinary: {e}")

@@ -1,61 +1,49 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table, DateTime, Boolean
-from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+from cloudinary.models import CloudinaryField
 
-Base = declarative_base()
-
-# Таблица связи между рецептами и категориями
-recipe_category = Table(
-    'recipes_recipe_categories',
-    Base.metadata,
-    Column('recipe_id', Integer, ForeignKey('recipes_recipe.id'), primary_key=True),
-    Column('category_id', Integer, ForeignKey('recipes_category.id'), primary_key=True)
-)
-
-class Category(Base):
-    __tablename__ = 'recipes_category'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), unique=True)
-    recipes = relationship('Recipe', secondary=recipe_category, back_populates='categories')
+class Category:
+    def __init__(self, name):
+        self.id = None
+        self.name = name
+        self.recipes = []
 
     def __repr__(self):
         return f"<Category {self.name}>"
 
-class Recipe(Base):
-    __tablename__ = 'recipes_recipe'
-
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), index=True)
-    description = Column(Text)
-    ingredients = Column(Text)
-    steps = Column(Text)
-    preparation_time = Column(Integer)
-    image = Column(String(100), nullable=True)
-    author_id = Column(Integer, ForeignKey('auth_user.id'))
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    categories = relationship('Category', secondary=recipe_category, back_populates='recipes')
-    author = relationship('User')
+class Recipe:
+    def __init__(self, title, description, ingredients, steps, preparation_time, image, author_id):
+        self.id = None
+        self.title = title
+        self.description = description
+        self.ingredients = ingredients
+        self.steps = steps
+        self.preparation_time = preparation_time
+        self.image = image  
+        self.author_id = author_id
+        self.created_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
+        self.categories = []
+        self.author = None
 
     def __repr__(self):
         return f"<Recipe {self.title}>"
 
-class User(Base):
-    __tablename__ = "auth_user"
-
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    password = Column(String)
-    email = Column(String)
-    first_name = Column(String)
-    last_name = Column(String)
-    is_active = Column(Boolean, default=True)
-    is_staff = Column(Boolean, default=False)
-    is_superuser = Column(Boolean, default=False)
-    date_joined = Column(DateTime(timezone=True), default=datetime.utcnow)
-    last_login = Column(DateTime(timezone=True), nullable=True)
+class User:
+    def __init__(self, username, password, email, first_name, last_name):
+        self.id = None
+        self.username = username
+        self.password = password
+        self.email = email
+        self.first_name = first_name
+        self.last_name = last_name
+        self.is_active = True
+        self.is_staff = False
+        self.is_superuser = False
+        self.date_joined = datetime.utcnow()
+        self.last_login = None
 
     def __repr__(self):
         return f"<User {self.username}>"

@@ -9,14 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.routing import Mount
 from api.main import app as fastapi_app
-import logging
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'recipe_site.settings')
 django_app = get_asgi_application()
-
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -37,11 +32,3 @@ app.mount("/", django_app)
 
 # Экспортируем приложение
 application = app
-
-# Логирование запросов
-@app.middleware("http")
-async def log_requests(request, call_next):
-    logger.info(f"Handling request: {request.method} {request.url}")
-    response = await call_next(request)
-    logger.info(f"Response status: {response.status_code}")
-    return response

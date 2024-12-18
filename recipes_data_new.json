@@ -75,7 +75,8 @@
       ],
       "author": 1,
       "created_at": "2024-12-08T12:03:43.940302+00:00",
-      "image": "recipes/recipe_12.webp"
+      "image": "recipes/recipe_12.webp",
+      "preparation_time": 30
     }
   },
   {
@@ -93,7 +94,8 @@
       ],
       "author": 1,
       "created_at": "2024-11-25T08:20:05.129432+00:00",
-      "image": "recipes/Салат Цезарь.webp"
+      "image": "recipes/Салат Цезарь.webp",
+      "preparation_time": 40
     }
   },
   {
@@ -110,7 +112,8 @@
       ],
       "author": 1,
       "created_at": "2024-11-24T06:34:34.705704+00:00",
-      "image": "recipes/Медовик.jpg"
+      "image": "recipes/Медовик.jpg",
+      "preparation_time": 120
     }
   },
   {
@@ -126,7 +129,8 @@
       ],
       "author": 1,
       "created_at": "2024-11-24T06:27:35.164099+00:00",
-      "image": "recipes/Морс_брусничный.webp"
+      "image": "recipes/Морс_брусничный.webp",
+      "preparation_time": 40
     }
   },
   {
@@ -142,7 +146,8 @@
       ],
       "author": 1,
       "created_at": "2024-11-24T05:19:27.320370+00:00",
-      "image": "recipes/Omelette.jpg"
+      "image": "recipes/Omelette.jpg",
+      "preparation_time": 10
     }
   },
   {
@@ -158,7 +163,8 @@
       ],
       "author": 1,
       "created_at": "2024-11-24T05:19:27.320370+00:00",
-      "image": "recipes/Блины.jpg"
+      "image": "recipes/Блины.jpg",
+      "preparation_time": 20
     }
   },
   {
@@ -174,7 +180,8 @@
       ],
       "author": 1,
       "created_at": "2024-11-24T05:19:27.320370+00:00",
-      "image": "recipes/Солянка.jpg"
+      "image": "recipes/Солянка.jpg",
+      "preparation_time": 45
     }
   }
 ]

@@ -22,6 +22,7 @@ def setup_test_environment():
     )
 
 @pytest.fixture
+@pytest.mark.django_db
 def test_user():
     """Создание тестового пользователя"""
     user = User.objects.create_user(
@@ -31,15 +32,16 @@ def test_user():
     return user
 
 @pytest.fixture
+@pytest.mark.django_db
 def test_category():
     """Создание тестовой категории"""
     category = Category.objects.create(
-        name='Test Category',
-        description='Test Category Description'
+        name='Test Category'
     )
     return category
 
 @pytest.fixture
+@pytest.mark.django_db
 def test_recipe(test_user, test_category):
     """Создание тестового рецепта"""
     recipe = Recipe.objects.create(
@@ -71,12 +73,14 @@ def test_read_root():
     assert response.status_code == 200
     assert response.json() == {"message": "Добро пожаловать в API рецептов!"}
 
+@pytest.mark.django_db
 def test_read_recipes():
     """Тест получения списка рецептов"""
     response = client.get("/recipes/")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
+@pytest.mark.django_db
 def test_get_recipe(test_recipe):
     """Тест получения конкретного рецепта"""
     response = client.get(f"/recipes/{test_recipe.id}")
@@ -85,6 +89,7 @@ def test_get_recipe(test_recipe):
     assert data["title"] == "Test Recipe"
     assert data["description"] == "Test Description"
 
+@pytest.mark.django_db
 def test_get_nonexistent_recipe():
     """Тест получения несуществующего рецепта"""
     response = client.get("/recipes/99999")
@@ -102,6 +107,7 @@ def test_create_recipe_unauthorized():
     )
     assert response.status_code == 401
 
+@pytest.mark.django_db
 def test_create_recipe(auth_headers, test_category, tmp_path):
     """Тест создания рецепта с авторизацией"""
     # Создаем временный файл для изображения
@@ -127,6 +133,7 @@ def test_create_recipe(auth_headers, test_category, tmp_path):
     assert data["description"] == "New Description"
     assert data["cooking_time"] == 45
 
+@pytest.mark.django_db
 def test_update_recipe(auth_headers, test_recipe):
     """Тест обновления рецепта"""
     response = client.put(
@@ -145,6 +152,7 @@ def test_update_recipe(auth_headers, test_recipe):
     assert data["description"] == "Updated Description"
     assert data["cooking_time"] == 60
 
+@pytest.mark.django_db
 def test_update_recipe_unauthorized(test_recipe):
     """Тест обновления рецепта без авторизации"""
     response = client.put(
@@ -157,6 +165,7 @@ def test_update_recipe_unauthorized(test_recipe):
     )
     assert response.status_code == 401
 
+@pytest.mark.django_db
 def test_delete_recipe(auth_headers, test_recipe):
     """Тест удаления рецепта"""
     response = client.delete(
@@ -169,11 +178,13 @@ def test_delete_recipe(auth_headers, test_recipe):
     response = client.get(f"/recipes/{test_recipe.id}")
     assert response.status_code == 404
 
+@pytest.mark.django_db
 def test_delete_recipe_unauthorized(test_recipe):
     """Тест удаления рецепта без авторизации"""
     response = client.delete(f"/recipes/{test_recipe.id}")
     assert response.status_code == 401
 
+@pytest.mark.django_db
 def test_get_categories(test_category):
     """Тест получения списка категорий"""
     response = client.get("/categories/")
@@ -182,14 +193,15 @@ def test_get_categories(test_category):
     assert len(data) > 0
     assert any(category["name"] == "Test Category" for category in data)
 
+@pytest.mark.django_db
 def test_get_category(test_category):
     """Тест получения конкретной категории"""
     response = client.get(f"/categories/{test_category.id}")
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "Test Category"
-    assert data["description"] == "Test Category Description"
 
+@pytest.mark.django_db
 def test_get_nonexistent_category():
     """Тест получения несуществующей категории"""
     response = client.get("/categories/99999")

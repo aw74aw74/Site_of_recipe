@@ -47,9 +47,10 @@ def test_recipe(test_user, test_category):
     recipe = Recipe.objects.create(
         title='Test Recipe',
         description='Test Description',
-        cooking_time=30,
+        preparation_time=30,
+        ingredients='Test Ingredients',
+        steps='Test Steps',
         author=test_user,
-        image='http://example.com/test.jpg'
     )
     recipe.categories.add(test_category)
     return recipe
@@ -57,14 +58,17 @@ def test_recipe(test_user, test_category):
 @pytest.fixture
 def auth_headers(test_user):
     """Получение заголовков с токеном авторизации"""
-    response = client.post(
-        "/token",
-        data={
-            "username": "testuser",
-            "password": "testpass123"
-        }
-    )
-    token = response.json()["access_token"]
+    from asgiref.sync import sync_to_async
+    import asyncio
+
+    async def get_token():
+        response = await sync_to_async(client.post)(
+            "/token",
+            data={"username": "testuser", "password": "testpass123"}
+        )
+        return response.json()["access_token"]
+
+    token = asyncio.run(get_token())
     return {"Authorization": f"Bearer {token}"}
 
 def test_read_root():
@@ -102,7 +106,9 @@ def test_create_recipe_unauthorized():
         json={
             "title": "New Recipe",
             "description": "New Description",
-            "cooking_time": 45
+            "preparation_time": 45,
+            "ingredients": "New Ingredients",
+            "steps": "New Steps"
         }
     )
     assert response.status_code == 401
@@ -120,7 +126,9 @@ def test_create_recipe(auth_headers, test_category, tmp_path):
             data={
                 "title": "New Recipe",
                 "description": "New Description",
-                "cooking_time": 45,
+                "preparation_time": 45,
+                "ingredients": "New Ingredients",
+                "steps": "New Steps",
                 "categories": [test_category.id]
             },
             files={"image": ("test.jpg", image, "image/jpeg")},
@@ -131,7 +139,7 @@ def test_create_recipe(auth_headers, test_category, tmp_path):
     data = response.json()
     assert data["title"] == "New Recipe"
     assert data["description"] == "New Description"
-    assert data["cooking_time"] == 45
+    assert data["preparation_time"] == 45
 
 @pytest.mark.django_db
 def test_update_recipe(auth_headers, test_recipe):
@@ -141,7 +149,9 @@ def test_update_recipe(auth_headers, test_recipe):
         json={
             "title": "Updated Recipe",
             "description": "Updated Description",
-            "cooking_time": 60
+            "preparation_time": 60,
+            "ingredients": "Updated Ingredients",
+            "steps": "Updated Steps"
         },
         headers=auth_headers
     )
@@ -150,7 +160,7 @@ def test_update_recipe(auth_headers, test_recipe):
     data = response.json()
     assert data["title"] == "Updated Recipe"
     assert data["description"] == "Updated Description"
-    assert data["cooking_time"] == 60
+    assert data["preparation_time"] == 60
 
 @pytest.mark.django_db
 def test_update_recipe_unauthorized(test_recipe):
@@ -160,7 +170,9 @@ def test_update_recipe_unauthorized(test_recipe):
         json={
             "title": "Updated Recipe",
             "description": "Updated Description",
-            "cooking_time": 60
+            "preparation_time": 60,
+            "ingredients": "Updated Ingredients",
+            "steps": "Updated Steps"
         }
     )
     assert response.status_code == 401

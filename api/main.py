@@ -73,17 +73,17 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @app.get("/recipes/", response_model=List[schemas.Recipe])
 def read_recipes(skip: int = 0, limit: int = 100):
     """Получение списка всех рецептов"""
-    recipes = Recipe.objects.all()[skip:skip + limit]
-    return [schemas.Recipe.from_orm(recipe) for recipe in recipes]
+    recipes = Recipe.objects.all()[skip:limit]
+    return [schemas.Recipe.model_validate(recipe, from_attributes=True) for recipe in recipes]
 
 @app.get("/recipes/{recipe_id}", response_model=schemas.Recipe)
 def get_recipe(recipe_id: int):
     """Получение рецепта по ID"""
     try:
         recipe = Recipe.objects.get(id=recipe_id)
-        return schemas.Recipe.from_orm(recipe)
+        return schemas.Recipe.model_validate(recipe, from_attributes=True)
     except Recipe.DoesNotExist:
-        raise HTTPException(status_code=404, detail="Рецепт не найден")
+        raise HTTPException(status_code=404, detail="Recipe not found")
 
 @app.post("/recipes/", response_model=schemas.Recipe)
 async def create_recipe(
@@ -95,30 +95,35 @@ async def create_recipe(
     Создание нового рецепта.
     Требует аутентификации пользователя.
     """
-    # Загрузка изображения в Cloudinary
-    image_content = await image.read()
-    cloudinary_response = cloudinary.uploader.upload(
-        BytesIO(image_content),
-        folder="recipes"
-    )
-    
-    # Создание рецепта
-    recipe_obj = Recipe.objects.create(
-        title=recipe.title,
-        description=recipe.description,
-        cooking_time=recipe.cooking_time,
-        image=cloudinary_response['url'],
-        author=current_user
-    )
-    
-    # Добавление категорий
-    if recipe.categories:
-        recipe_obj.categories.set(recipe.categories)
-    
-    return schemas.Recipe.from_orm(recipe_obj)
+    try:
+        # Загрузка изображения в Cloudinary
+        image_data = await image.read()
+        cloudinary_response = cloudinary.uploader.upload(image_data)
+        image_url = cloudinary_response['secure_url']
+
+        # Создание рецепта
+        new_recipe = Recipe.objects.create(
+            title=recipe.title,
+            description=recipe.description,
+            preparation_time=recipe.preparation_time,
+            ingredients=recipe.ingredients,
+            steps=recipe.steps,
+            author=current_user,
+            image=image_url
+        )
+
+        # Добавление категорий
+        if recipe.categories:
+            categories = Category.objects.filter(id__in=recipe.categories)
+            new_recipe.categories.set(categories)
+
+        return schemas.Recipe.model_validate(new_recipe, from_attributes=True)
+    except Exception as e:
+        logger.error(f"Error creating recipe: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/recipes/{recipe_id}", response_model=schemas.Recipe)
-async def update_recipe(
+def update_recipe(
     recipe_id: int,
     recipe: schemas.RecipeUpdate,
     current_user: User = Depends(auth.get_current_user)
@@ -129,30 +134,37 @@ async def update_recipe(
     Пользователь может обновлять только свои рецепты.
     """
     try:
-        recipe_obj = Recipe.objects.get(id=recipe_id)
+        db_recipe = Recipe.objects.get(id=recipe_id)
         
         # Проверка прав доступа
-        if recipe_obj.author != current_user:
+        if db_recipe.author != current_user:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Нет прав для редактирования этого рецепта"
+                status_code=403,
+                detail="Not authorized to update this recipe"
             )
-        
+
         # Обновление полей
         if recipe.title is not None:
-            recipe_obj.title = recipe.title
+            db_recipe.title = recipe.title
         if recipe.description is not None:
-            recipe_obj.description = recipe.description
-        if recipe.cooking_time is not None:
-            recipe_obj.cooking_time = recipe.cooking_time
+            db_recipe.description = recipe.description
+        if recipe.preparation_time is not None:
+            db_recipe.preparation_time = recipe.preparation_time
+        if recipe.ingredients is not None:
+            db_recipe.ingredients = recipe.ingredients
+        if recipe.steps is not None:
+            db_recipe.steps = recipe.steps
         if recipe.categories is not None:
-            recipe_obj.categories.set(recipe.categories)
-        
-        recipe_obj.save()
-        return schemas.Recipe.from_orm(recipe_obj)
-        
+            categories = Category.objects.filter(id__in=recipe.categories)
+            db_recipe.categories.set(categories)
+
+        db_recipe.save()
+        return schemas.Recipe.model_validate(db_recipe, from_attributes=True)
     except Recipe.DoesNotExist:
-        raise HTTPException(status_code=404, detail="Рецепт не найден")
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    except Exception as e:
+        logger.error(f"Error updating recipe: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/recipes/{recipe_id}")
 async def delete_recipe(
@@ -198,13 +210,11 @@ async def update_recipe_image(
             )
         
         # Загрузка нового изображения в Cloudinary
-        image_content = await image.read()
-        cloudinary_response = cloudinary.uploader.upload(
-            BytesIO(image_content),
-            folder="recipes"
-        )
+        image_data = await image.read()
+        cloudinary_response = cloudinary.uploader.upload(image_data)
+        image_url = cloudinary_response['secure_url']
         
-        recipe.image = cloudinary_response['url']
+        recipe.image = image_url
         recipe.save()
         
         return {"message": "Изображение успешно обновлено"}
@@ -216,16 +226,16 @@ async def update_recipe_image(
 def get_categories():
     """Получение списка всех категорий"""
     categories = Category.objects.all()
-    return [schemas.Category.from_orm(category) for category in categories]
+    return [schemas.Category.model_validate(category, from_attributes=True) for category in categories]
 
 @app.get("/categories/{category_id}", response_model=schemas.Category)
 def get_category(category_id: int):
     """Получение конкретной категории по ID"""
     try:
         category = Category.objects.get(id=category_id)
-        return schemas.Category.from_orm(category)
+        return schemas.Category.model_validate(category, from_attributes=True)
     except Category.DoesNotExist:
-        raise HTTPException(status_code=404, detail="Категория не найдена")
+        raise HTTPException(status_code=404, detail="Category not found")
 
 @app.get("/")
 def read_root():

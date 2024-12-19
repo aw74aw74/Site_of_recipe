@@ -32,7 +32,9 @@ class User(UserBase):
 class RecipeBase(BaseModel):
     title: str
     description: str
-    cooking_time: int
+    preparation_time: int
+    ingredients: str
+    steps: str
 
 class RecipeCreate(RecipeBase):
     categories: Optional[List[int]] = None
@@ -40,19 +42,30 @@ class RecipeCreate(RecipeBase):
 class RecipeUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    cooking_time: Optional[int] = None
+    preparation_time: Optional[int] = None
+    ingredients: Optional[str] = None
+    steps: Optional[str] = None
     categories: Optional[List[int]] = None
 
 class Recipe(RecipeBase):
     id: int
     image: Optional[str] = None
     author: User
+    categories: List[Category] = []
     created_at: datetime
     updated_at: datetime
-    categories: List[Category] = []
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def from_orm(cls, obj):
+        # Преобразуем ImageFieldFile в строку
+        if obj.image:
+            obj.image = str(obj.image)
+        # Преобразуем related manager в список
+        obj.categories = list(obj.categories.all())
+        return super().from_orm(obj)
 
 class Token(BaseModel):
     access_token: str

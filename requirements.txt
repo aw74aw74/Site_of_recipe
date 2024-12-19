@@ -6,12 +6,12 @@ tzdata==2023.3
 six==1.17.0
 
 # FastAPI и его зависимости
-# fastapi==0.115.6
-# uvicorn==0.32.1
-# pydantic==2.10.3
-# python-jose==3.3.0
-# passlib==1.7.4
-# python-multipart==0.0.19
+fastapi==0.115.6
+uvicorn==0.25.0
+pydantic==2.10.3
+python-jose==3.3.0
+passlib==1.7.4
+python-multipart==0.0.19
 
 # База данных
 psycopg2-binary==2.9.10

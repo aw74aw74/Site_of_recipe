@@ -4,6 +4,7 @@ from datetime import datetime
 
 class CategoryBase(BaseModel):
     name: str
+    description: Optional[str] = None
 
 class CategoryCreate(CategoryBase):
     pass
@@ -14,31 +15,41 @@ class Category(CategoryBase):
     class Config:
         from_attributes = True
 
+class UserBase(BaseModel):
+    username: str
+    email: Optional[str] = None
+
+class UserCreate(UserBase):
+    password: str
+
+class User(UserBase):
+    id: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
 class RecipeBase(BaseModel):
     title: str
     description: str
-    ingredients: str
-    steps: str
-    preparation_time: int
+    cooking_time: int
 
 class RecipeCreate(RecipeBase):
-    category_ids: List[int]
+    categories: Optional[List[int]] = None
 
-class RecipeUpdate(RecipeBase):
+class RecipeUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    ingredients: Optional[str] = None
-    steps: Optional[str] = None
-    preparation_time: Optional[int] = None
-    category_ids: Optional[List[int]] = None
+    cooking_time: Optional[int] = None
+    categories: Optional[List[int]] = None
 
 class Recipe(RecipeBase):
     id: int
     image: Optional[str] = None
-    author_id: int
+    author: User
     created_at: datetime
     updated_at: datetime
-    categories: List[Category]
+    categories: List[Category] = []
 
     class Config:
         from_attributes = True

@@ -10,6 +10,12 @@ import os
 from . import models, schemas, auth
 import cloudinary
 import cloudinary.uploader
+from django.core.wsgi import get_wsgi_application
+from django.db import connection
+from recipes.models import Recipe, Category
+from django.contrib.auth.models import User
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from io import BytesIO
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -32,229 +38,196 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency
-def get_db():
-    # db = SessionLocal()
-    # try:
-    #     yield db
-    # finally:
-    #     db.close()
-    pass
+# Инициализация Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'recipe_site.settings')
+django_app = get_wsgi_application()
 
 # Инициализация базовой аутентификации
 security = OAuth2PasswordBearer(tokenUrl="token")
 
-def authenticate_user(credentials: OAuth2PasswordRequestForm = Depends(), db = None):
+def authenticate_user(credentials: OAuth2PasswordRequestForm = Depends()):
     """Проверка логина и пароля пользователя"""
-    # user = db.query(models.User).filter(models.User.username == credentials.username).first()
-    # if not user:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED,
-    #         detail="Неверное имя пользователя",
-    #         headers={"WWW-Authenticate": "Basic"},
-    #     )
+    try:
+        user = User.objects.get(username=credentials.username)
+        if user.check_password(credentials.password):
+            return user
+    except User.DoesNotExist:
+        pass
     
-    # # Для простоты тестирования проверяем, что пароль совпадает с именем пользователя
-    # if credentials.password != credentials.username:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED,
-    #         detail="Неверный пароль",
-    #         headers={"WWW-Authenticate": "Basic"},
-    #     )
-    
-    # return user
-    pass
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Неверное имя пользователя или пароль",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 @app.post("/token", response_model=schemas.Token)
-async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db = None
-):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """Получение токена доступа"""
-    # user = auth.authenticate_user(db, form_data.username, form_data.password)
-    # if not user:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED,
-    #         detail="Incorrect username or password",
-    #         headers={"WWW-Authenticate": "Bearer"},
-    #     )
-    # access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
-    # access_token = auth.create_access_token(
-    #     data={"sub": user.username}, expires_delta=access_token_expires
-    # )
-    # return {"access_token": access_token, "token_type": "bearer"}
-    pass
+    user = authenticate_user(form_data)
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/recipes/", response_model=List[schemas.Recipe])
-def read_recipes(skip: int = 0, limit: int = 100, db = None):
+def read_recipes(skip: int = 0, limit: int = 100):
     """Получение списка всех рецептов"""
-    # recipes = db.query(models.Recipe).offset(skip).limit(limit).all()
-    # return recipes
-    pass
+    recipes = Recipe.objects.all()[skip:skip + limit]
+    return [schemas.Recipe.from_orm(recipe) for recipe in recipes]
 
 @app.get("/recipes/{recipe_id}", response_model=schemas.Recipe)
-def get_recipe(recipe_id: int, db = None):
+def get_recipe(recipe_id: int):
     """Получение рецепта по ID"""
-    # recipe = db.query(models.Recipe).filter(models.Recipe.id == recipe_id).first()
-    # if recipe is None:
-    #     raise HTTPException(status_code=404, detail="Рецепт не найден")
-    # return recipe
-    pass
+    try:
+        recipe = Recipe.objects.get(id=recipe_id)
+        return schemas.Recipe.from_orm(recipe)
+    except Recipe.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Рецепт не найден")
 
 @app.post("/recipes/", response_model=schemas.Recipe)
 async def create_recipe(
     recipe: schemas.RecipeCreate,
     image: UploadFile = File(...),
-    db = None,
-    current_user = None
+    current_user: User = Depends(auth.get_current_user)
 ):
     """
     Создание нового рецепта.
     Требует аутентификации пользователя.
     """
-    # # Загружаем изображение в Cloudinary
-    # cloudinary_response = cloudinary.uploader.upload(image.file)
-    # db_recipe = models.Recipe(
-    #     title=recipe.title,
-    #     description=recipe.description,
-    #     ingredients=recipe.ingredients,
-    #     steps=recipe.steps,
-    #     preparation_time=recipe.preparation_time,
-    #     image=cloudinary_response['secure_url'],  # Сохраняем URL изображения
-    #     author_id=current_user.id
-    # )
+    # Загрузка изображения в Cloudinary
+    image_content = await image.read()
+    cloudinary_response = cloudinary.uploader.upload(
+        BytesIO(image_content),
+        folder="recipes"
+    )
     
-    # # Добавляем категории
-    # categories = db.query(models.Category).filter(
-    #     models.Category.id.in_(recipe.category_ids)
-    # ).all()
-    # db_recipe.categories = categories
+    # Создание рецепта
+    recipe_obj = Recipe.objects.create(
+        title=recipe.title,
+        description=recipe.description,
+        cooking_time=recipe.cooking_time,
+        image=cloudinary_response['url'],
+        author=current_user
+    )
     
-    # db.add(db_recipe)
-    # db.commit()
-    # db.refresh(db_recipe)
-    # return db_recipe
-    pass
+    # Добавление категорий
+    if recipe.categories:
+        recipe_obj.categories.set(recipe.categories)
+    
+    return schemas.Recipe.from_orm(recipe_obj)
 
 @app.put("/recipes/{recipe_id}", response_model=schemas.Recipe)
-def update_recipe(
+async def update_recipe(
     recipe_id: int,
     recipe: schemas.RecipeUpdate,
-    db = None,
-    current_user = None
+    current_user: User = Depends(auth.get_current_user)
 ):
     """
     Обновление рецепта.
     Требует аутентификации пользователя.
     Пользователь может обновлять только свои рецепты.
     """
-    # db_recipe = db.query(models.Recipe).filter(models.Recipe.id == recipe_id).first()
-    # if db_recipe is None:
-    #     raise HTTPException(status_code=404, detail="Рецепт не найден")
-    
-    # # Проверяем, что пользователь является автором рецепта
-    # if db_recipe.author_id != current_user.id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Нет прав для обновления этого рецепта"
-    #     )
-
-    # # Обновляем поля рецепта
-    # if recipe.title is not None:
-    #     db_recipe.title = recipe.title
-    # if recipe.description is not None:
-    #     db_recipe.description = recipe.description
-    # if recipe.ingredients is not None:
-    #     db_recipe.ingredients = recipe.ingredients
-    # if recipe.steps is not None:
-    #     db_recipe.steps = recipe.steps
-    # if recipe.preparation_time is not None:
-    #     db_recipe.preparation_time = recipe.preparation_time
-    
-    # # Обновляем категории, если они предоставлены
-    # if recipe.category_ids is not None:
-    #     categories = db.query(models.Category).filter(
-    #         models.Category.id.in_(recipe.category_ids)
-    #     ).all()
-    #     db_recipe.categories = categories
-
-    # db.commit()
-    # db.refresh(db_recipe)
-    # return db_recipe
-    pass
+    try:
+        recipe_obj = Recipe.objects.get(id=recipe_id)
+        
+        # Проверка прав доступа
+        if recipe_obj.author != current_user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Нет прав для редактирования этого рецепта"
+            )
+        
+        # Обновление полей
+        if recipe.title is not None:
+            recipe_obj.title = recipe.title
+        if recipe.description is not None:
+            recipe_obj.description = recipe.description
+        if recipe.cooking_time is not None:
+            recipe_obj.cooking_time = recipe.cooking_time
+        if recipe.categories is not None:
+            recipe_obj.categories.set(recipe.categories)
+        
+        recipe_obj.save()
+        return schemas.Recipe.from_orm(recipe_obj)
+        
+    except Recipe.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Рецепт не найден")
 
 @app.delete("/recipes/{recipe_id}")
-def delete_recipe(
+async def delete_recipe(
     recipe_id: int,
-    db = None,
-    current_user = None
+    current_user: User = Depends(auth.get_current_user)
 ):
     """
     Удаление рецепта.
     Требует аутентификации пользователя.
     Пользователь может удалить только свой рецепт.
     """
-    # db_recipe = db.query(models.Recipe).filter(models.Recipe.id == recipe_id).first()
-    # if db_recipe is None:
-    #     raise HTTPException(status_code=404, detail="Рецепт не найден")
-    
-    # # Проверяем, что пользователь является автором рецепта
-    # if db_recipe.author_id != current_user.id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Нет прав для удаления этого рецепта"
-    #     )
-    
-    # db.delete(db_recipe)
-    # db.commit()
-    
-    # return {"message": f"Рецепт {recipe_id} успешно удален"}
-    pass
+    try:
+        recipe = Recipe.objects.get(id=recipe_id)
+        
+        # Проверка прав доступа
+        if recipe.author != current_user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Нет прав для удаления этого рецепта"
+            )
+        
+        recipe.delete()
+        return {"message": "Рецепт успешно удален"}
+        
+    except Recipe.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Рецепт не найден")
 
-@app.put("/recipes/{recipe_id}/image", response_model=schemas.Recipe)
+@app.put("/recipes/{recipe_id}/image")
 async def update_recipe_image(
     recipe_id: int,
     image: UploadFile = File(...),
-    db = None,
-    current_user = None
+    current_user: User = Depends(auth.get_current_user)
 ):
     """Обновление изображения рецепта"""
-    # recipe = db.query(models.Recipe).filter(models.Recipe.id == recipe_id).first()
-    # if not recipe:
-    #     raise HTTPException(status_code=404, detail="Рецепт не найден")
-    
-    # # Проверяем, что пользователь является автором рецепта
-    # if recipe.author_id != current_user.id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Нет прав для обновления этого рецепта"
-    #     )
-    
-    # # Загружаем изображение в Cloudinary
-    # cloudinary_response = cloudinary.uploader.upload(image.file)
-    # recipe.image = cloudinary_response['secure_url']  # Сохраняем URL изображения
-    
-    # db.commit()
-    # db.refresh(recipe)
-
-    # return recipe
-    pass
+    try:
+        recipe = Recipe.objects.get(id=recipe_id)
+        
+        # Проверка прав доступа
+        if recipe.author != current_user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Нет прав для обновления этого рецепта"
+            )
+        
+        # Загрузка нового изображения в Cloudinary
+        image_content = await image.read()
+        cloudinary_response = cloudinary.uploader.upload(
+            BytesIO(image_content),
+            folder="recipes"
+        )
+        
+        recipe.image = cloudinary_response['url']
+        recipe.save()
+        
+        return {"message": "Изображение успешно обновлено"}
+        
+    except Recipe.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Рецепт не найден")
 
 @app.get("/categories/", response_model=List[schemas.Category])
-def get_categories(db = None):
+def get_categories():
     """Получение списка всех категорий"""
-    # return db.query(models.Category).all()
-    pass
+    categories = Category.objects.all()
+    return [schemas.Category.from_orm(category) for category in categories]
 
 @app.get("/categories/{category_id}", response_model=schemas.Category)
-def get_category(category_id: int, db = None):
+def get_category(category_id: int):
     """Получение конкретной категории по ID"""
-    # category = db.query(models.Category).filter(models.Category.id == category_id).first()
-    # if category is None:
-    #     raise HTTPException(status_code=404, detail="Категория не найдена")
-    # return category
-    pass
+    try:
+        category = Category.objects.get(id=category_id)
+        return schemas.Category.from_orm(category)
+    except Category.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Категория не найдена")
 
 @app.get("/")
-async def read_root():
-    return {"message": "Welcome to Recipe API"}
+def read_root():
+    """Корневой эндпоинт"""
+    return {"message": "Добро пожаловать в API рецептов!"}

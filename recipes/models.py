@@ -100,7 +100,7 @@ class Recipe(models.Model):
         null=True,
         blank=True,
         help_text="Загрузите фотографию готового блюда",
-        verbose_name="Изображение"
+        verbose_name="Фотография"
     )
     
     author = models.ForeignKey(

@@ -19,10 +19,6 @@ recipe_site/
 │   ├── auth.py            # Аутентификация для API
 │   ├── main.py            # Основные эндпоинты API
 │   ├── schemas.py         # Pydantic модели
-│   └── tests/             # Тесты API
-│       ├── __init__.py
-│       ├── conftest.py    # Конфигурация тестов
-│       └── test_api.py    # Тесты API эндпоинтов
 │
 ├── recipe_site/           # Основной проект Django
 │   ├── __init__.py

@@ -32,9 +32,7 @@ class User(UserBase):
 class RecipeBase(BaseModel):
     title: str
     description: str
-    preparation_time: int
-    ingredients: str
-    steps: str
+    cooking_time: int
 
 class RecipeCreate(RecipeBase):
     categories: Optional[List[int]] = None
@@ -42,9 +40,7 @@ class RecipeCreate(RecipeBase):
 class RecipeUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    preparation_time: Optional[int] = None
-    ingredients: Optional[str] = None
-    steps: Optional[str] = None
+    cooking_time: Optional[int] = None
     categories: Optional[List[int]] = None
 
 class Recipe(RecipeBase):

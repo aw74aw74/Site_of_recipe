@@ -1,21 +1,33 @@
-from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile
+import os
+import sys
+import logging
+from pathlib import Path
+from datetime import datetime, timedelta
+from fastapi import FastAPI, HTTPException, Depends, File, UploadFile, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import timedelta
-from typing import List
-from pathlib import Path
-import logging
-import shutil
-import os
-from . import models, schemas, auth
 import cloudinary
 import cloudinary.uploader
-from django.core.wsgi import get_wsgi_application
-from django.db import connection
-from recipes.models import Recipe, Category
+from io import BytesIO
+from typing import List
+from asgiref.sync import sync_to_async
+
+# Настройка путей для Django
+CURRENT_DIR = Path(__file__).resolve().parent
+BASE_DIR = CURRENT_DIR.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.append(str(BASE_DIR))
+
+# Инициализация Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'recipe_site.settings')
+import django
+django.setup()
+
+# Импорты Django после инициализации
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from io import BytesIO
+from recipes.models import Recipe, Category
+from . import models, schemas, auth
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -38,52 +50,69 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Инициализация Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'recipe_site.settings')
-django_app = get_wsgi_application()
-
 # Инициализация базовой аутентификации
 security = OAuth2PasswordBearer(tokenUrl="token")
 
-def authenticate_user(credentials: OAuth2PasswordRequestForm = Depends()):
-    """Проверка логина и пароля пользователя"""
+def authenticate_user(form_data: OAuth2PasswordRequestForm):
+    """Аутентификация пользователя"""
     try:
-        user = User.objects.get(username=credentials.username)
-        if user.check_password(credentials.password):
-            return user
-    except User.DoesNotExist:
-        pass
-    
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Неверное имя пользователя или пароль",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+        user = auth.authenticate_user(form_data.username, form_data.password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Неверное имя пользователя или пароль",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return user
+    except Exception as e:
+        logger.error(f"Error in authenticate_user: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверное имя пользователя или пароль",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 @app.post("/token", response_model=schemas.Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """Получение токена доступа"""
-    user = authenticate_user(form_data)
-    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = auth.create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        user = authenticate_user(form_data)
+        access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = auth.create_access_token(
+            data={"sub": user}, expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error in login_for_access_token: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Произошла внутренняя ошибка сервера"
+        )
 
 @app.get("/recipes/", response_model=List[schemas.Recipe])
-def read_recipes(skip: int = 0, limit: int = 100):
+async def read_recipes(skip: int = 0, limit: int = 100):
     """Получение списка всех рецептов"""
-    recipes = Recipe.objects.all()[skip:skip + limit]
-    return [schemas.Recipe.from_orm(recipe) for recipe in recipes]
+    @sync_to_async
+    def get_recipes():
+        recipes = Recipe.objects.all()[skip:skip + limit]
+        return [schemas.Recipe.model_validate(recipe) for recipe in recipes]
+    
+    return await get_recipes()
 
 @app.get("/recipes/{recipe_id}", response_model=schemas.Recipe)
-def get_recipe(recipe_id: int):
+async def get_recipe(recipe_id: int):
     """Получение рецепта по ID"""
-    try:
-        recipe = Recipe.objects.get(id=recipe_id)
-        return schemas.Recipe.from_orm(recipe)
-    except Recipe.DoesNotExist:
-        raise HTTPException(status_code=404, detail="Рецепт не найден")
+    @sync_to_async
+    def get_recipe_by_id():
+        try:
+            recipe = Recipe.objects.get(id=recipe_id)
+            return schemas.Recipe.model_validate(recipe)
+        except Recipe.DoesNotExist:
+            raise HTTPException(status_code=404, detail="Рецепт не найден")
+    
+    return await get_recipe_by_id()
 
 @app.post("/recipes/", response_model=schemas.Recipe)
 async def create_recipe(
@@ -217,19 +246,27 @@ async def update_recipe_image(
         raise HTTPException(status_code=404, detail="Рецепт не найден")
 
 @app.get("/categories/", response_model=List[schemas.Category])
-def get_categories():
+async def get_categories():
     """Получение списка всех категорий"""
-    categories = Category.objects.all()
-    return [schemas.Category.from_orm(category) for category in categories]
+    @sync_to_async
+    def get_all_categories():
+        categories = Category.objects.all()
+        return [schemas.Category.model_validate(category) for category in categories]
+    
+    return await get_all_categories()
 
 @app.get("/categories/{category_id}", response_model=schemas.Category)
-def get_category(category_id: int):
+async def get_category(category_id: int):
     """Получение конкретной категории по ID"""
-    try:
-        category = Category.objects.get(id=category_id)
-        return schemas.Category.from_orm(category)
-    except Category.DoesNotExist:
-        raise HTTPException(status_code=404, detail="Категория не найдена")
+    @sync_to_async
+    def get_category_by_id():
+        try:
+            category = Category.objects.get(id=category_id)
+            return schemas.Category.model_validate(category)
+        except Category.DoesNotExist:
+            raise HTTPException(status_code=404, detail="Категория не найдена")
+    
+    return await get_category_by_id()
 
 @app.get("/")
 def read_root():

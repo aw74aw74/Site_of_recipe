@@ -22,7 +22,6 @@ def setup_test_environment():
     )
 
 @pytest.fixture
-@pytest.mark.django_db
 def test_user():
     """Создание тестового пользователя"""
     user = User.objects.create_user(
@@ -32,7 +31,6 @@ def test_user():
     return user
 
 @pytest.fixture
-@pytest.mark.django_db
 def test_category():
     """Создание тестовой категории"""
     category = Category.objects.create(
@@ -41,35 +39,32 @@ def test_category():
     return category
 
 @pytest.fixture
-@pytest.mark.django_db
 def test_recipe(test_user, test_category):
     """Создание тестового рецепта"""
     recipe = Recipe.objects.create(
         title='Test Recipe',
         description='Test Description',
-        preparation_time=30,
         ingredients='Test Ingredients',
         steps='Test Steps',
+        preparation_time=30,
         author=test_user,
     )
-    recipe.categories.add(test_category)
+    recipe.categories.set([test_category])
     return recipe
 
 @pytest.fixture
 def auth_headers(test_user):
-    """Получение заголовков с токеном авторизации"""
-    from asgiref.sync import sync_to_async
-    import asyncio
+    """Создание заголовков с токеном авторизации для тестового пользователя"""
+    # Логин для получения токена
+    response = client.post(
+        "/token",
+        data={"username": test_user.username, "password": "testpass123"}
+    )
+    assert response.status_code == 200
+    access_token = response.json().get("access_token")
+    assert access_token is not None  # Убедитесь, что токен получен
 
-    async def get_token():
-        response = await sync_to_async(client.post)(
-            "/token",
-            data={"username": "testuser", "password": "testpass123"}
-        )
-        return response.json()["access_token"]
-
-    token = asyncio.run(get_token())
-    return {"Authorization": f"Bearer {token}"}
+    return {"Authorization": f"Bearer {access_token}"}
 
 def test_read_root():
     """Тест корневого эндпоинта"""
@@ -91,7 +86,7 @@ def test_get_recipe(test_recipe):
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "Test Recipe"
-    assert data["description"] == "Test Description"
+    assert data["preparation_time"] == 30
 
 @pytest.mark.django_db
 def test_get_nonexistent_recipe():
@@ -99,6 +94,7 @@ def test_get_nonexistent_recipe():
     response = client.get("/recipes/99999")
     assert response.status_code == 404
 
+@pytest.mark.django_db
 def test_create_recipe_unauthorized():
     """Тест создания рецепта без авторизации"""
     response = client.post(
@@ -106,9 +102,9 @@ def test_create_recipe_unauthorized():
         json={
             "title": "New Recipe",
             "description": "New Description",
-            "preparation_time": 45,
             "ingredients": "New Ingredients",
-            "steps": "New Steps"
+            "steps": "New Steps",
+            "preparation_time": 45,
         }
     )
     assert response.status_code == 401
@@ -116,26 +112,20 @@ def test_create_recipe_unauthorized():
 @pytest.mark.django_db
 def test_create_recipe(auth_headers, test_category, tmp_path):
     """Тест создания рецепта с авторизацией"""
-    # Создаем временный файл для изображения
-    test_image = tmp_path / "test.jpg"
-    test_image.write_bytes(b"fake image content")
+    response = client.post(
+        "/recipes/",
+        json={
+            "title": "New Recipe",
+            "description": "New Description",
+            "ingredients": "New Ingredients",
+            "steps": "New Steps",
+            "preparation_time": 45,
+            "categories": [test_category.id]
+        },
+        headers=auth_headers
+    )
     
-    with open(test_image, "rb") as image:
-        response = client.post(
-            "/recipes/",
-            data={
-                "title": "New Recipe",
-                "description": "New Description",
-                "preparation_time": 45,
-                "ingredients": "New Ingredients",
-                "steps": "New Steps",
-                "categories": [test_category.id]
-            },
-            files={"image": ("test.jpg", image, "image/jpeg")},
-            headers=auth_headers
-        )
-    
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["title"] == "New Recipe"
     assert data["description"] == "New Description"
@@ -149,9 +139,10 @@ def test_update_recipe(auth_headers, test_recipe):
         json={
             "title": "Updated Recipe",
             "description": "Updated Description",
-            "preparation_time": 60,
             "ingredients": "Updated Ingredients",
-            "steps": "Updated Steps"
+            "steps": "Updated Steps",
+            "preparation_time": 60,
+            "categories": [test_recipe.categories.first().id]
         },
         headers=auth_headers
     )
@@ -170,9 +161,9 @@ def test_update_recipe_unauthorized(test_recipe):
         json={
             "title": "Updated Recipe",
             "description": "Updated Description",
-            "preparation_time": 60,
             "ingredients": "Updated Ingredients",
-            "steps": "Updated Steps"
+            "steps": "Updated Steps",
+            "preparation_time": 60,
         }
     )
     assert response.status_code == 401
@@ -184,7 +175,7 @@ def test_delete_recipe(auth_headers, test_recipe):
         f"/recipes/{test_recipe.id}",
         headers=auth_headers
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
     
     # Проверяем, что рецепт действительно удален
     response = client.get(f"/recipes/{test_recipe.id}")
